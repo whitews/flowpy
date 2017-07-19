@@ -1,0 +1,6 @@
+.idea
+*.pyc
+build
+scratch*.py
+*.fcs
+*.xml
