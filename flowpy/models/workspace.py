@@ -168,7 +168,7 @@ class Workspace(object):
             return
 
         s = Sample(fcs_file_path, track_indices=True)
-        s.generate_subsample(500000, random_seed=123)
+        s.generate_subsample(0, random_seed=123)
         s.compensate_events(comp_matrix)
 
         if transform == 'logicle':
