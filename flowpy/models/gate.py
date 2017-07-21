@@ -41,7 +41,7 @@ def parse_polygon_gate(events, channel_labels, gate):
 
     path = Path(xy_vertices)
 
-    is_in_gate = path.contains_points(xy_events)
+    is_in_gate = path.contains_points(xy_events, radius=0.0)
 
     gated_events = events[is_in_gate]
 
