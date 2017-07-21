@@ -176,9 +176,9 @@ class Workspace(object):
 
         # find groups to which the sample belongs
         sample_groups = []
-        for id, ws_group in self.groups.items():
+        for group_id, ws_group in self.groups.items():
             if chosen_sample in ws_group['samples']:
-                sample_groups.append(id)
+                sample_groups.append(group_id)
 
         if len(sample_groups) <= 0:
             UserWarning("%s does not belong to any groups in workspace" % base_name)
