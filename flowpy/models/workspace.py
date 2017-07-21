@@ -158,9 +158,9 @@ class Workspace(object):
         base_name = os.path.basename(fcs_file_path)
         chosen_sample = None
 
-        for id, ws_sample in self.samples.items():
+        for sample_id, ws_sample in self.samples.items():
             if base_name == ws_sample['filename']:
-                chosen_sample = id
+                chosen_sample = sample_id
                 break
 
         if chosen_sample is None:
@@ -183,7 +183,7 @@ class Workspace(object):
         if len(sample_groups) <= 0:
             UserWarning("%s does not belong to any groups in workspace" % base_name)
 
-        results_dict = { 'sample_groups': [] }  # keys will be group IDs
+        results_dict = {'sample_groups': []}  # keys will be group IDs
 
         for sg_id in sample_groups:
             sg = self.groups[sg_id]
@@ -195,4 +195,3 @@ class Workspace(object):
             results_dict['sample_groups'].append(deepcopy(sg))
 
         return results_dict
-
