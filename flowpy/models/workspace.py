@@ -186,12 +186,12 @@ class Workspace(object):
         results_dict = {'sample_groups': []}  # keys will be group IDs
 
         for sg_id in sample_groups:
-            sg = self.groups[sg_id]
+            sg = deepcopy(self.groups[sg_id])
 
             # looks like the FlowJo XML gates are saved
             # on compensated but not transformed data
             gate.apply_gating_hierarchy(s.events_compensated, s.channels, sg['populations'])
 
-            results_dict['sample_groups'].append(deepcopy(sg))
+            results_dict['sample_groups'].append(sg)
 
         return results_dict
