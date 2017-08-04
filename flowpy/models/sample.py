@@ -19,7 +19,11 @@ class Sample(object):
 
         self.flow_data = flowio.FlowData(fcs_file_path)
         self.event_count = self.flow_data.event_count
-        self.acquisition_date = self.flow_data.text['date']
+        try:
+            self.acquisition_date = self.flow_data.text['date']
+        except KeyError:
+            self.acquisition_date = None
+
         self.fcs_path = fcs_file_path
         self.filename = os.path.basename(fcs_file_path)
 
