@@ -1,7 +1,7 @@
 from xml.etree import cElementTree
 import os
-from sample import Sample
-import gate
+from flowpy import Sample
+from flowpy.models import gate
 from copy import deepcopy
 
 
@@ -153,9 +153,13 @@ class Workspace(object):
         self.samples = sample_dict
         self.groups = group_dict
 
-    def analyze_sample(self, fcs_file_path, comp_matrix, transform='logicle'):
-        # verify the given FCS file is in this workspace
-        base_name = os.path.basename(fcs_file_path)
+    def analyze_sample(self, fcs_file_path, comp_matrix, alt_name=None):
+        # verify the given FCS file (or alt_name if given) is in this workspace
+        if alt_name is not None:
+            base_name = alt_name
+        else:
+            base_name = os.path.basename(fcs_file_path)
+
         chosen_sample = None
 
         for sample_id, ws_sample in self.samples.items():
@@ -171,9 +175,6 @@ class Workspace(object):
         s.generate_subsample(0, random_seed=123)
         s.compensate_events(comp_matrix)
 
-        if transform == 'logicle':
-            s.transform_logicle()
-
         # find groups to which the sample belongs
         sample_groups = []
         for group_id, ws_group in self.groups.items():
@@ -183,7 +184,11 @@ class Workspace(object):
         if len(sample_groups) <= 0:
             UserWarning("%s does not belong to any groups in workspace" % base_name)
 
-        results_dict = {'sample_groups': []}  # keys will be group IDs
+        results_dict = {
+            'sample_groups': [],
+            'filename': base_name,
+            'event_count': s.event_count
+        }
 
         for sg_id in sample_groups:
             sg = deepcopy(self.groups[sg_id])
