@@ -150,31 +150,50 @@ class Sample(object):
 
         # TODO: if this is called more than once, need to reset downstream transforms to None
 
-        # TODO: Allow "identity" matrix via compensation_matrix=None
-
-        # remove any white space at the beginning or end
-        compensation_matrix = compensation_matrix.strip()
-
-        # split lines by \r or \n
-        compensation_matrix = compensation_matrix.splitlines()
-
-        # split values by \t
-        compensation_matrix = [line.split('\t') for line in compensation_matrix]
-
-        # convert header to channel indices
-        channel_map = self.get_channel_numbers_by_channel_labels()
-
-        header = compensation_matrix[0]
         fluoro_indices = []
 
-        try:
-            for label in header:
-                fluoro_indices.append(channel_map[label] - 1)
-        except KeyError:
-            raise KeyError("Compensation matrix labels do not match FCS file!")
+        if compensation_matrix is not None:
+            # remove any white space at the beginning or end
+            compensation_matrix = compensation_matrix.strip()
 
-        compensation_matrix = compensation_matrix[1:]  # just the matrix
-        compensation_matrix = np.array(compensation_matrix, dtype=np.float)
+            # split lines by \r or \n
+            compensation_matrix = compensation_matrix.splitlines()
+
+            # split values by \t
+            compensation_matrix = [line.split('\t') for line in compensation_matrix]
+
+            # convert header to channel indices
+            header = compensation_matrix[0]
+            compensation_matrix = compensation_matrix[1:]  # just the matrix
+            compensation_matrix = np.array(compensation_matrix, dtype=np.float)
+
+            channel_map = self.get_channel_numbers_by_channel_labels()
+
+            try:
+                for label in header:
+                    fluoro_indices.append(channel_map[label] - 1)
+            except KeyError:
+                raise KeyError("Compensation matrix labels do not match FCS file!")
+        else:
+            # assume identity matrix
+            non_fluoro_channels = [
+                'FSC-A',
+                'FSC-H',
+                'FSC-W',
+                'SSC-A',
+                'SSC-H',
+                'SSC-W',
+                'Time',
+                'Index'
+            ]
+
+            for c, labels in self.channels.items():
+                if labels['PnN'] not in non_fluoro_channels:
+                    fluoro_indices.append(int(c) - 1)
+
+            fluoro_indices.sort()
+            compensation_matrix = np.identity(len(fluoro_indices))
+
         comp_data = flowutils.compensate.compensate(
             self.events_subsampled,
             compensation_matrix,
