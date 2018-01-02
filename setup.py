@@ -9,6 +9,7 @@ setup(
     requires=[
         'matplotlib',
         'numpy',
+        'pandas',
         'flowio',
         'flowutils'
     ]
