@@ -103,7 +103,7 @@ class Workspace(object):
         :param xml_workspace: FlowJo XML workspace file
         """
 
-        with open(xml_workspace, 'rb') as in_file:
+        with open(xml_workspace, 'r') as in_file:
             tree = cElementTree.parse(in_file)
 
         # first parse out the samples
@@ -123,11 +123,15 @@ class Workspace(object):
             except KeyError:
                 comp_id = None
 
+            # a sample may have it's own individual gating hierarchy independent of
+            # a sample group, we'll search for them here
+            sample_populations = find_nested_populations(sample_node)
+
             sample_dict[s.attrib['sampleID']] = {
                 'filename': sample_node.attrib['nodeName'],
                 'compensationID': comp_id,
-                'eventCount': s.attrib['eventCount']
-
+                'eventCount': s.attrib['eventCount'],
+                'populations': sample_populations
             }
 
         # next, parse the sample groups
@@ -153,13 +157,27 @@ class Workspace(object):
         self.samples = sample_dict
         self.groups = group_dict
 
-    def analyze_sample(self, fcs_file_path, comp_matrix, alt_name=None):
-        # verify the given FCS file (or alt_name if given) is in this workspace
-        if alt_name is not None:
-            base_name = alt_name
-        else:
-            base_name = os.path.basename(fcs_file_path)
+    def get_gate_hierarchies(self):
+        gate_dict = {
+            'samples': {},
+            'groups': {}
+        }
 
+        for s_id, s_dict in self.samples.items():
+            gate_dict['samples'][s_id] = {
+                'name': s_dict['filename']
+            }
+
+        for g_id, g_dict in self.groups.items():
+            gate_dict['groups'][g_id] = {
+                'name': g_dict['group_name'],
+                'samples': g_dict['samples']
+            }
+
+        return gate_dict
+
+    def find_matching_gate_hierarchies(self, fcs_file_path):
+        base_name = os.path.basename(fcs_file_path)
         chosen_sample = None
 
         for sample_id, ws_sample in self.samples.items():
@@ -169,34 +187,48 @@ class Workspace(object):
 
         if chosen_sample is None:
             UserWarning("%s was not found in workspace" % base_name)
-            return
+            return None
+
+        matching_gates = {
+            'sample_id': chosen_sample,
+            'groups': []
+        }
+
+        # find groups to which the sample belongs
+        for group_id, ws_group in self.groups.items():
+            if chosen_sample in ws_group['samples']:
+                matching_gates['groups'].append(group_id)
+
+        return matching_gates
+
+    def analyze_sample(self, fcs_file_path, comp_matrix, gate_type, gate_id):
+        base_name = os.path.basename(fcs_file_path)
 
         s = Sample(fcs_file_path, track_indices=True)
         s.generate_subsample(0, random_seed=123)
         s.compensate_events(comp_matrix)
-
-        # find groups to which the sample belongs
-        sample_groups = []
-        for group_id, ws_group in self.groups.items():
-            if chosen_sample in ws_group['samples']:
-                sample_groups.append(group_id)
-
-        if len(sample_groups) <= 0:
-            UserWarning("%s does not belong to any groups in workspace" % base_name)
+        
+        # check gate type, options are 'sample' or 'group'
+        if gate_type == 'sample':
+            chosen_gate = deepcopy(self.samples[str(gate_id)])
+        elif gate_type == 'group':
+            chosen_gate = deepcopy(self.groups[str(gate_id)])
+        else:
+            raise ValueError("Gate type %s is not valid, use 'sample' or 'group'" % gate_type)
 
         results_dict = {
-            'sample_groups': [],
-            'filename': base_name,
-            'event_count': s.event_count
+            'filename': base_name
         }
 
-        for sg_id in sample_groups:
-            sg = deepcopy(self.groups[sg_id])
+        # looks like the FlowJo XML gates are saved
+        # on compensated but not transformed data
+        gate.apply_gating_hierarchy(
+            s.events_compensated,
+            s.channels,
+            chosen_gate['populations']
+        )
 
-            # looks like the FlowJo XML gates are saved
-            # on compensated but not transformed data
-            gate.apply_gating_hierarchy(s.events_compensated, s.channels, sg['populations'])
-
-            results_dict['sample_groups'].append(sg)
+        results_dict['populations'] = chosen_gate['populations']
+        results_dict['report'] = gate.results_to_dataframe(chosen_gate)
 
         return results_dict
