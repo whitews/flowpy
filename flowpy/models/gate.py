@@ -1,5 +1,6 @@
 from matplotlib.path import Path
 import numpy as np
+import pandas as pd
 import warnings
 
 
@@ -86,20 +87,21 @@ def parse_boolean_gates(events, gating_dict, boolean_gate_list):
                 continue
 
             for group_gate in gating_dict[g]['gates']:
-                if len(group_gate['result']['gated_events']) > 0:
-                    # get the event indices for this gate
-                    gate_events = group_gate['result']['gated_events'][:, 0]
+                # if len(group_gate['result']['gated_events']) > 0:
 
-                    # find boolean array of these indices from all parent events
-                    gate_include_events = np.in1d(
-                        events[:, 0],
-                        list(gate_events),
-                        invert=invert
-                    )
-                    all_include_events = np.logical_and(
-                        all_include_events,
-                        gate_include_events
-                    )
+                # get the event indices for this gate
+                gate_events = group_gate['result']['gated_events'][:, 0]
+
+                # find boolean array of these indices from all parent events
+                gate_include_events = np.in1d(
+                    events[:, 0],
+                    list(gate_events),
+                    invert=invert
+                )
+                all_include_events = np.logical_and(
+                    all_include_events,
+                    gate_include_events
+                )
 
         gated_events = events[all_include_events]
 
@@ -149,3 +151,34 @@ def apply_gating_hierarchy(events, channel_labels, gating_dict):
 
     if len(boolean_gates) > 0:
         parse_boolean_gates(events, gating_dict, boolean_gates)
+
+
+def parse_results_dict(population_root, parent_label):
+    parsed_results = []
+
+    for label, pop in population_root.items():
+        if len(pop['gates']) > 1:
+            print('multi-region gate')
+
+        parsed_results.append({
+            'parent': parent_label,
+            'label': label,
+            'type': pop['gates'][0]['type'],
+            'count': pop['gates'][0]['result']['gated_events'].shape[0],
+            'parent_count': pop['gates'][0]['result']['ungated_count']
+        })
+
+        child_results = parse_results_dict(pop['children'], label)
+        parsed_results.extend(child_results)
+
+    return parsed_results
+
+
+def results_to_dataframe(results):
+    sg_results = parse_results_dict(results['populations'], 'root')
+    df = pd.DataFrame(sg_results)
+    df = df[['parent', 'label', 'type', 'parent_count', 'count']]
+    df['relative_percent'] = (df['count'] / df['parent_count']) * 100.0
+    df.sort_values(by=['parent', 'label'], inplace=True)
+
+    return df
