@@ -1,9 +1,9 @@
 from flowpy import Workspace
 import os
 
-filename = "/home/swhite/Projects/flowpy_testing/test_data_2d_01.fcs"
+filename = "test_data_2d_01.fcs"
 
-wsp = Workspace("/home/swhite/Projects/flowpy_testing/20171218 Workspace.xml")
+wsp = Workspace("20171218 Workspace.xml")
 
 # First, get the gate IDs and names in the workspace.
 # There are 2 possible classes of gates, one for each sample and then some
@@ -18,7 +18,7 @@ results = wsp.analyze_sample(filename, None, 'group', group_id)
 
 results['report'].to_csv(
     '%s__%s.csv' % (
-        os.path.splitext(filename)[0],
+        filename,
         gates['groups'][str(group_id)]['name']),
     index=False,
     encoding='utf-8'
