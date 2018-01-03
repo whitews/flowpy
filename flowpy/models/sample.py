@@ -39,15 +39,8 @@ class Sample(object):
         if track_indices:
             self.channels['1'] = {'PnN': 'Index'}
 
-        # additional metadata
-        self.specimen = None
-        self.stimulation = None
-        self.storage = None
-        self.pretreatment = None
-        self.visit = None
-        self.patient_id = None
-
         # compensation & transform info
+        # TODO: implement extraction of compensation from FCS metadata
         self.compensation = None
         self.fluoro_indices = None
 
