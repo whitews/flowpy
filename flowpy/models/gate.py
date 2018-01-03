@@ -161,14 +161,17 @@ def parse_results_dict(population_root, parent_label):
             print('multi-region gate')
 
         parsed_results.append({
-            'parent': parent_label,
+            'parent_path': parent_label,
             'label': label,
             'type': pop['gates'][0]['type'],
             'count': pop['gates'][0]['result']['gated_events'].shape[0],
             'parent_count': pop['gates'][0]['result']['ungated_count']
         })
 
-        child_results = parse_results_dict(pop['children'], label)
+        child_results = parse_results_dict(
+            pop['children'],
+            '/'.join([parent_label, label])
+        )
         parsed_results.extend(child_results)
 
     return parsed_results
@@ -177,8 +180,8 @@ def parse_results_dict(population_root, parent_label):
 def results_to_dataframe(results):
     sg_results = parse_results_dict(results['populations'], 'root')
     df = pd.DataFrame(sg_results)
-    df = df[['parent', 'label', 'type', 'parent_count', 'count']]
+    df = df[['parent_path', 'label', 'type', 'parent_count', 'count']]
     df['relative_percent'] = (df['count'] / df['parent_count']) * 100.0
-    df.sort_values(by=['parent', 'label'], inplace=True)
+    df.sort_values(by=['parent_path', 'label'], inplace=True)
 
     return df
