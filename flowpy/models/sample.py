@@ -8,19 +8,21 @@ class Sample(object):
     """
     Represents an Flow Cytometry Standard (FCS) sample
     """
-    def __init__(self, fcs_file_path, use_file_compensation=False, track_indices=False):
+    def __init__(self, fcs_file_path, track_indices=False):
         """
         fcs_file_path: path to FCS file
-        use_file_compensation: whether to use the compensation matrix within the FCS file
-        
+        track_indices: if True, adds a column to event data for tracking event indices
+            for all analysis operations
+
         Note: Retrieving events always gives the sub-sampled data. Use subsample_count=0 
         to analyze all the events.
         """
 
-        self.flow_data = flowio.FlowData(fcs_file_path)
-        self.event_count = self.flow_data.event_count
+        flow_data = flowio.FlowData(fcs_file_path)
+        self.metadata = flow_data.text
+        self.event_count = flow_data.event_count
         try:
-            self.acquisition_date = self.flow_data.text['date']
+            self.acquisition_date = flow_data.text['date']
         except KeyError:
             self.acquisition_date = None
 
@@ -28,7 +30,7 @@ class Sample(object):
         self.filename = os.path.basename(fcs_file_path)
 
         self.channels = {}
-        for chan_num, labels in self.flow_data.channels.items():
+        for chan_num, labels in flow_data.channels.items():
             if track_indices:
                 new_chan_num = str(int(chan_num) + 1)
             else:
@@ -41,8 +43,7 @@ class Sample(object):
 
         # compensation & transform info
         # TODO: implement extraction of compensation from FCS metadata
-        self.compensation = None
-        self.fluoro_indices = None
+        self._fluoro_indices = None
 
         # sub-sample info
         self.subsample_indices = None
@@ -54,12 +55,12 @@ class Sample(object):
 
         # convert events to NumPy array
         self.raw_events = np.reshape(
-            self.flow_data.events,
-            (-1, self.flow_data.channel_count)
+            flow_data.events,
+            (-1, flow_data.channel_count)
         )
         if track_indices:
             self.raw_events = np.hstack(
-                (np.array(range(self.flow_data.event_count))[:, np.newaxis], self.raw_events)
+                (np.array(range(flow_data.event_count))[:, np.newaxis], self.raw_events)
             )
 
     def get_channel_numbers_by_channel_labels(self):
@@ -135,7 +136,7 @@ class Sample(object):
         The compensation matrix must be a comma delimited text file with
         a header row containing the corresponding PnN channel labels.
 
-        Retrieve compensated events via subsample_compensated_events
+        Retrieve compensated events via `events_compensated` attribute
         """
         # flowutils compensate() takes the plain matrix and indices as
         # separate arguments
@@ -193,12 +194,12 @@ class Sample(object):
             fluoro_indices
         )
 
-        self.fluoro_indices = fluoro_indices
+        self._fluoro_indices = fluoro_indices
         self.events_compensated = comp_data
 
     def transform_logicle(self, t=262144, w=0.5):
         """
-        The default pre-scale factor is 0.003
+        Apply a logicle transform to the **compensated** events.
 
         Retrieve transformed data via events_transformed
         """
@@ -206,7 +207,7 @@ class Sample(object):
 
         x_data = flowutils.transforms.logicle(
             self.events_compensated,
-            self.fluoro_indices,
+            self._fluoro_indices,
             t=t,
             w=w
         )
@@ -223,7 +224,7 @@ class Sample(object):
         """
         x_data = flowutils.transforms.asinh(
             self.events_compensated,
-            self.fluoro_indices,
+            self._fluoro_indices,
             pre_scale=pre_scale
         )
 
