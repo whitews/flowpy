@@ -118,18 +118,12 @@ class Workspace(object):
             if filename == "":
                 continue
 
-            try:
-                comp_id = s.attrib['compensationID']
-            except KeyError:
-                comp_id = None
-
             # a sample may have it's own individual gating hierarchy independent of
             # a sample group, we'll search for them here
             sample_populations = find_nested_populations(sample_node)
 
             sample_dict[s.attrib['sampleID']] = {
                 'filename': sample_node.attrib['nodeName'],
-                'compensationID': comp_id,
                 'eventCount': s.attrib['eventCount'],
                 'populations': sample_populations
             }
@@ -154,6 +148,7 @@ class Workspace(object):
                 'populations': pops
             }
 
+        # TODO: add comp attribute for lookup
         self.samples = sample_dict
         self.groups = group_dict
 
