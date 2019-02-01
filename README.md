@@ -1,3 +1,5 @@
+### **Note: FlowPy is no longer being developed or maintained due to the difficulty in supporting multiple versions of the proprietary FlowJo workspace format and the lack of an XML schema definition for validating those documents. [FlowIO](https://github.com/whitews/flowio) & [FlowUtils](https://github.com/whitews/flowutils) are still being maintained for lower level interaction with FCS data, and a new library, [FlowKit](https://github.com/whitews/flowkit), is in development to support high-level interaction including full GatingML 2.0 support.**
+
 # FlowPy
 
 A Python library for high level interaction with flow cytometry data (FCS files), including support for FlowJo XML workspace files.
